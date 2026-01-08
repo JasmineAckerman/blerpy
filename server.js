@@ -107,6 +107,7 @@ app.post('/v1/chat/completions', async (req, res) => {
         'Authorization': `Bearer ${NIM_API_KEY}`,
         'Content-Type': 'application/json'
       },
+     timeout: 0,
       responseType: stream ? 'stream' : 'json'
     });
     
@@ -115,7 +116,15 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
-      
+      const heartbeat = setInterval(() => {
+            if (!res.writableEnded) {
+                res.write(': heartbeat\n\n'); 
+            }
+        }, 15000);
+
+        response.data.once('data', () => clearInterval(heartbeat));
+        res.on('close', () => clearInterval(heartbeat));
+        res.on('finish', () => clearInterval(heartbeat));
       let buffer = '';
       let reasoningStarted = false;
       
